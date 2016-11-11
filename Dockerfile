@@ -22,14 +22,10 @@ RUN export DEBIAN_FRONTEND='noninteractive' && \
     addgroup --system vpn
 COPY openvpn.sh /usr/bin/
 
-# Configure ssh-server
-# really this needs to not be password-based authentication
-RUN echo 'root:root' |chpasswd
-
+# Configure ssh-server and start it
 RUN sed -ri 's/^PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config && \
     sed -ri 's/#?PasswordAuthentication\s+.*/PasswordAuthentication no/g' /etc/ssh/sshd_config
-    
 RUN mkdir -p /var/run/sshd
 
 EXPOSE 22
