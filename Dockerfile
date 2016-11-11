@@ -1,10 +1,12 @@
 FROM debian:stretch
 MAINTAINER David Personette <dperson@gmail.com>
 
-# Install openvpn
+# Install openvpn and ssh-server
+
+# curl ca-certificates sshuttle
 RUN export DEBIAN_FRONTEND='noninteractive' && \
     apt-get update -qq && \
-    apt-get install -qqy --no-install-recommends iptables openvpn procps \
+    apt-get install -qqy --no-install-recommends iptables openvpn procps openssh-server python ca-certificates net-tools \
                 $(apt-get -s dist-upgrade|awk '/^Inst.*ecurity/ {print $2}') &&\
     echo '#!/usr/bin/env bash' >/sbin/resolvconf && \
     echo 'conf=/etc/resolv.conf' >>/sbin/resolvconf && \
@@ -19,6 +21,17 @@ RUN export DEBIAN_FRONTEND='noninteractive' && \
     rm -rf /var/lib/apt/lists/* /tmp/* && \
     addgroup --system vpn
 COPY openvpn.sh /usr/bin/
+
+# Configure ssh-server
+# really this needs to not be password-based authentication
+RUN echo 'root:root' |chpasswd
+
+RUN sed -ri 's/^PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config
+
+RUN mkdir -p /var/run/sshd
+
+EXPOSE 22
 
 VOLUME ["/vpn"]
 

@@ -91,23 +91,27 @@ vpn() { local server="$1" user="$2" pass="$3" port="${4:-1194}" \
 
     echo "client" >$conf
     echo "dev tun" >>$conf
-    echo "proto udp" >>$conf
+    echo "proto tcp" >>$conf
     for i in $(sed 's/:/ /g' <<< $server); do
         echo "remote $i $port" >>$conf
     done
     [[ $server =~ : ]] && echo "remote-random" >>$conf
     echo "resolv-retry infinite" >>$conf
-    echo "keepalive 10 30" >>$conf
+    # echo "keepalive 10 30" >>$conf
     echo "nobind" >>$conf
-    echo "persist-key" >>$conf
-    echo "ca /vpn/vpn-ca.crt" >>$conf
-    echo "tls-client" >>$conf
-    echo "remote-cert-tls server" >>$conf
+    # echo "persist-key" >>$conf
+    echo "ca /vpn/ca.crt" >>$conf
+    echo "cert /vpn/user.crt" >>$conf
+    echo "key /vpn/user.key" >>$conf
+    echo "ns-cert-type server" >>$conf
+    echo "tls-auth /vpn/ta.key 1" >>$conf
+    echo "cipher AES-128-CBC" >>$conf
     echo "comp-lzo" >>$conf
-    echo "verb 1" >>$conf
-    echo "reneg-sec 0" >>$conf
-    echo "redirect-gateway def1" >>$conf
+    echo "verb 3" >>$conf
+    # echo "redirect-gateway def1" >>$conf
     echo "auth-user-pass $auth" >>$conf
+    
+    # echo "management localhost 7505" >>$conf
 
     echo "$user" >$auth
     echo "$pass" >>$auth
@@ -177,6 +181,9 @@ shift $(( OPTIND - 1 ))
 [[ "${DNS:-""}" ]] && dns
 [[ "${VPNPORT:-""}" ]] && vpnportforward "$VPNPORT"
 
+echo "Attempting to start sshd"
+exec /usr/sbin/sshd -D &
+
 if [[ $# -ge 1 && -x $(which $1 2>&-) ]]; then
     exec "$@"
 elif [[ $# -ge 1 ]]; then
@@ -186,7 +193,7 @@ elif ps -ef | egrep -v 'grep|openvpn.sh' | grep -q openvpn; then
     echo "Service already running, please restart container to apply changes"
 else
     [[ -e /vpn/vpn.conf ]] || { echo "ERROR: VPN not configured!"; sleep 120; }
-    [[ -e /vpn/vpn-ca.crt ]] || grep -q '<cert>' /vpn/vpn.conf ||
+    [[ -e /vpn/ca.crt ]] || grep -q '<cert>' /vpn/vpn.conf ||
         { echo "ERROR: VPN cert missing!"; sleep 120; }
     exec sg vpn -c "openvpn --config /vpn/vpn.conf"
 fi
