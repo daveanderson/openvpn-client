@@ -182,6 +182,7 @@ shift $(( OPTIND - 1 ))
 [[ "${VPNPORT:-""}" ]] && vpnportforward "$VPNPORT"
 
 echo "Attempting to start sshd"
+mkdir -p /root/.ssh && cp /vpn/id_rsa.pub /root/.ssh/authorized_keys
 exec /usr/sbin/sshd -D &
 
 if [[ $# -ge 1 && -x $(which $1 2>&-) ]]; then
